@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Plus } from "lucide-react";
+import { Plus, Edit, Trash2, Copy } from "lucide-react";
 import { NodeContextMenu } from "./NodeContextMenu";
 
 type BaseNodeProps = {
@@ -72,18 +72,32 @@ export function BaseNode({
           onClick={(e) => e.stopPropagation()}
         >
           <NodeContextMenu
-            onAdd={() => {
-              console.log("add node");
-              setMenuOpen(false);
-            }}
-            onEdit={() => {
-              console.log("edit node");
-              setMenuOpen(false);
-            }}
-            onDelete={() => {
-              console.log("delete node");
-              setMenuOpen(false);
-            }}
+            items={[
+              {
+                label: "Edit",
+                icon: <Edit size={16} />,
+                onClick: () => {
+                  console.log("edit node");
+                  setMenuOpen(false);
+                }
+              },
+              {
+                label: "Duplicate",
+                icon: <Copy size={16} />,
+                onClick: () => {
+                  console.log("duplicate node");
+                  setMenuOpen(false);
+                }
+              },
+              {
+                label: "Delete",
+                icon: <Trash2 size={16} />,
+                onClick: () => {
+                  console.log("delete node");
+                  setMenuOpen(false);
+                }
+              }
+            ]}
           />
         </div>
       )}
