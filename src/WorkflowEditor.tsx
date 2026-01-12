@@ -1,0 +1,290 @@
+import React, { useCallback, useState } from "react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  addEdge,
+  Connection,
+  Edge,
+  Node,
+  useNodesState,
+  useEdgesState,
+  NodeChange,
+  EdgeChange,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
+import { Edit2, Save, Play } from "lucide-react";
+
+import { Badge } from "./ui/components/Badge";
+import { Button } from "./ui/components/Button";
+import { TextField } from "./ui/components/TextField";
+
+import { EditorLayout } from "./ui/layouts/EditorLayout";
+import { Sidebar } from "./Sidebar";
+import { InspectorPanel } from "./InspectorPanel";
+import { nodeTypes } from "./nodes";
+
+function createsCycle(
+  sourceId: string,
+  targetId: string,
+  edges: Edge[]
+): boolean {
+  const graph: Record<string, string[]> = {};
+
+  edges.forEach((e) => {
+    if (!graph[e.source]) graph[e.source] = [];
+    graph[e.source].push(e.target);
+  });
+
+  if (!graph[sourceId]) graph[sourceId] = [];
+  graph[sourceId].push(targetId);
+
+  const visited = new Set<string>();
+  const stack = new Set<string>();
+
+  function dfs(node: string): boolean {
+    if (stack.has(node)) return true;
+    if (visited.has(node)) return false;
+
+    visited.add(node);
+    stack.add(node);
+
+    for (const next of graph[node] || []) {
+      if (dfs(next)) return true;
+    }
+
+    stack.delete(node);
+    return false;
+  }
+
+  return dfs(sourceId);
+}
+
+function isValidConnection(
+  connection: Connection,
+  nodes: Node[],
+  edges: Edge[]
+): boolean {
+  const { source, target } = connection;
+  if (!source || !target) return false;
+
+  const sourceNode = nodes.find((n) => n.id === source);
+  const targetNode = nodes.find((n) => n.id === target);
+
+  if (!sourceNode || !targetNode) return false;
+
+  if (targetNode.type === "startNode" || targetNode.type === "messageReceivedNode") {
+    return false;
+  }
+
+  if (
+    sourceNode.type === "customResponseNode" &&
+    sourceNode.data?.isFinal
+  ) {
+    return false;
+  }
+
+  const inputUsed = edges.some((e) => e.target === target);
+  if (inputUsed) return false;
+
+  if (createsCycle(source, target, edges)) return false;
+
+  return true;
+}
+
+const initialNodes: Node[] = [
+  {
+    id: "start",
+    type: "startNode",
+    position: { x: 250, y: 100 },
+    data: { label: "Inicio del flujo" },
+  },
+];
+
+const initialEdges: Edge[] = [];
+
+const defaultEdgeOptions = {
+  animated: true,
+  style: { stroke: "#ff0071", strokeWidth: 2 },
+};
+
+export default function WorkflowEditor() {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [workflowName, setWorkflowName] = useState(
+    "Mi Workflow de WhatsApp Bot"
+  );
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+
+  const onConnect = useCallback(
+    (params: Connection) => {
+      if (!isValidConnection(params, nodes, edges)) {
+        console.warn("Conexión inválida", params);
+        return;
+      }
+      setEdges((eds) => addEdge(params, eds));
+    },
+    [nodes, edges, setEdges]
+  );
+
+  const addNode = (type: string) => {
+    if (type === "startNode") {
+      const exists = nodes.some((n) => n.type === "startNode");
+      if (exists) {
+        alert("Solo puede existir un nodo de Inicio");
+        return;
+      }
+    }
+
+    const typeLabels: Record<string, string> = {
+      startNode: "Inicio",
+      messageReceivedNode: "Mensaje recibido",
+      sendMessageNode: "Enviar mensaje",
+      waitResponseNode: "Esperar respuesta",
+      conditionNode: "Condición",
+      saveDataNode: "Guardar datos",
+      webhookNode: "Webhook",
+    };
+
+    const newNode: Node = {
+      id: crypto.randomUUID(),
+      type,
+      position: {
+        x: 250 + Math.random() * 200,
+        y: 150 + Math.random() * 200,
+      },
+      data: { label: typeLabels[type] || `Nuevo ${type}` },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+  };
+
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      setSelectedNode(node);
+    },
+    []
+  );
+
+  const handlePaneClick = useCallback(() => {
+    setSelectedNode(null);
+  }, []);
+
+  const handleNodeDataChange = useCallback(
+    (newData: any) => {
+      if (!selectedNode) return;
+
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === selectedNode.id
+            ? { ...node, data: newData }
+            : node
+        )
+      );
+
+      setSelectedNode((prev) =>
+        prev ? { ...prev, data: newData } : null
+      );
+    },
+    [selectedNode, setNodes]
+  );
+
+  const handleSave = () => {
+    const workflow = {
+      name: workflowName,
+      nodes,
+      edges,
+      lastModified: new Date().toISOString(),
+    };
+    console.log("Guardando workflow:", workflow);
+    alert("Workflow guardado correctamente");
+  };
+
+  const handleExecute = () => {
+    console.log("Ejecutando workflow con nodos:", nodes);
+    alert("Iniciando ejecución del workflow...");
+  };
+
+  return (
+    <EditorLayout
+      sidebar={<Sidebar onAddNode={addNode} />}
+      inspector={
+        <InspectorPanel
+          node={selectedNode}
+          onChange={handleNodeDataChange}
+        />
+      }
+    >
+      <div className="flex h-full w-full flex-col">
+        <div className="flex flex-col gap-3 border-b bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <TextField className="w-full sm:w-80">
+              <TextField.Input
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
+                placeholder="Nombre del workflow"
+              />
+            </TextField>
+            <Badge variant="neutral" icon={<Edit2 size={14} />}>
+              Editando
+            </Badge>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="neutral-secondary"
+              icon={<Save size={16} />}
+              onClick={handleSave}
+            >
+              <span className="hidden sm:inline">Guardar</span>
+            </Button>
+            <Button
+              variant="brand-primary"
+              icon={<Play size={16} />}
+              onClick={handleExecute}
+            >
+              <span className="hidden sm:inline">Ejecutar</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0 min-h-0 bg-neutral-50">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={handleNodeClick}
+            onPaneClick={handlePaneClick}
+            nodeTypes={nodeTypes}
+            defaultEdgeOptions={defaultEdgeOptions}
+            fitView
+            proOptions={{ hideAttribution: true }}
+            className="touch-none"
+          >
+            <Background />
+            <Controls className="hidden sm:flex" />
+            <MiniMap
+              className="hidden lg:block"
+              nodeColor={(node) => {
+                const colors: Record<string, string> = {
+                  startNode: "#10b981",
+                  sendMessageNode: "#3b82f6",
+                  messageReceivedNode: "#8b5cf6",
+                  waitResponseNode: "#f59e0b",
+                  conditionNode: "#ef4444",
+                  saveDataNode: "#06b6d4",
+                  webhookNode: "#a855f7",
+                };
+                return colors[node.type || "default"] || "#666";
+              }}
+            />
+          </ReactFlow>
+        </div>
+      </div>
+    </EditorLayout>
+  );
+}
