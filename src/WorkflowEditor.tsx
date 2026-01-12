@@ -12,6 +12,7 @@ import {
   useEdgesState,
   NodeChange,
   EdgeChange,
+  ConnectionLineType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -108,6 +109,12 @@ const initialEdges: Edge[] = [];
 const defaultEdgeOptions = {
   animated: true,
   style: { stroke: "#ff0071", strokeWidth: 2 },
+  type: "smoothstep" as const,
+};
+
+const connectionLineStyle = {
+  stroke: "#ff0071",
+  strokeWidth: 2,
 };
 
 export default function WorkflowEditor() {
@@ -124,7 +131,7 @@ export default function WorkflowEditor() {
         console.warn("Conexión inválida", params);
         return;
       }
-      setEdges((eds) => addEdge(params, eds));
+      setEdges((eds) => addEdge({ ...params, type: "smoothstep" }, eds));
     },
     [nodes, edges, setEdges]
   );
@@ -142,10 +149,23 @@ export default function WorkflowEditor() {
       startNode: "Inicio",
       messageReceivedNode: "Mensaje recibido",
       sendMessageNode: "Enviar mensaje",
+      sendImageNode: "Enviar imagen",
+      sendVideoNode: "Enviar video",
+      sendAudioNode: "Enviar audio",
+      sendDocumentNode: "Enviar documento",
+      sendLocationNode: "Enviar ubicación",
+      sendContactNode: "Enviar contacto",
       waitResponseNode: "Esperar respuesta",
       conditionNode: "Condición",
       saveDataNode: "Guardar datos",
+      scheduleMessageNode: "Programar mensaje",
+      createGroupNode: "Crear grupo",
+      sendCatalogNode: "Catálogo",
+      paymentRequestNode: "Solicitar pago",
       webhookNode: "Webhook",
+      botResponseNode: "Respuesta IA",
+      userValidationNode: "Validar usuario",
+      configurationNode: "Configuración",
     };
 
     const newNode: Node = {
@@ -160,6 +180,55 @@ export default function WorkflowEditor() {
 
     setNodes((nds) => [...nds, newNode]);
   };
+
+  const handleEditNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      setSelectedNode(node);
+    }
+  }, [nodes]);
+
+  const handleRenameNode = useCallback((nodeId: string) => {
+    const newLabel = prompt("Nuevo nombre para el nodo:");
+    if (newLabel) {
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, label: newLabel } }
+            : node
+        )
+      );
+    }
+  }, [setNodes]);
+
+  const handleDuplicateNode = useCallback((nodeId: string) => {
+    const nodeToDuplicate = nodes.find(n => n.id === nodeId);
+    if (nodeToDuplicate) {
+      const newNode: Node = {
+        ...nodeToDuplicate,
+        id: crypto.randomUUID(),
+        position: {
+          x: nodeToDuplicate.position.x + 50,
+          y: nodeToDuplicate.position.y + 50,
+        },
+        data: {
+          ...nodeToDuplicate.data,
+          label: `${nodeToDuplicate.data.label} (copia)`,
+        },
+      };
+      setNodes((nds) => [...nds, newNode]);
+    }
+  }, [nodes, setNodes]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    if (confirm("¿Estás seguro de que quieres eliminar este nodo?")) {
+      setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+      setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null);
+      }
+    }
+  }, [setNodes, setEdges, selectedNode]);
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -206,6 +275,22 @@ export default function WorkflowEditor() {
     console.log("Ejecutando workflow con nodos:", nodes);
     alert("Iniciando ejecución del workflow...");
   };
+
+  // Enhanced node types with action handlers
+  const enhancedNodeTypes = Object.fromEntries(
+    Object.entries(nodeTypes).map(([key, Component]) => [
+      key,
+      (props: any) => (
+        <Component
+          {...props}
+          onEdit={handleEditNode}
+          onRename={handleRenameNode}
+          onDuplicate={handleDuplicateNode}
+          onDelete={handleDeleteNode}
+        />
+      ),
+    ])
+  );
 
   return (
     <EditorLayout
@@ -259,8 +344,10 @@ export default function WorkflowEditor() {
             onConnect={onConnect}
             onNodeClick={handleNodeClick}
             onPaneClick={handlePaneClick}
-            nodeTypes={nodeTypes}
+            nodeTypes={enhancedNodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
+            connectionLineStyle={connectionLineStyle}
+            connectionLineType={ConnectionLineType.SmoothStep}
             fitView
             proOptions={{ hideAttribution: true }}
             className="touch-none"
@@ -273,11 +360,24 @@ export default function WorkflowEditor() {
                 const colors: Record<string, string> = {
                   startNode: "#10b981",
                   sendMessageNode: "#3b82f6",
+                  sendImageNode: "#22c55e",
+                  sendVideoNode: "#f97316",
+                  sendAudioNode: "#84cc16",
+                  sendDocumentNode: "#6366f1",
+                  sendLocationNode: "#ec4899",
+                  sendContactNode: "#14b8a6",
                   messageReceivedNode: "#8b5cf6",
                   waitResponseNode: "#f59e0b",
                   conditionNode: "#ef4444",
                   saveDataNode: "#06b6d4",
+                  scheduleMessageNode: "#f59e0b",
+                  createGroupNode: "#8b5cf6",
+                  sendCatalogNode: "#059669",
+                  paymentRequestNode: "#dc2626",
                   webhookNode: "#a855f7",
+                  botResponseNode: "#7c3aed",
+                  userValidationNode: "#0891b2",
+                  configurationNode: "#64748b",
                 };
                 return colors[node.type || "default"] || "#666";
               }}

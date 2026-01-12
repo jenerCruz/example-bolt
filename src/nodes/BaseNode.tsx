@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Plus, CreditCard as Edit, Trash2, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, Copy } from "lucide-react";
 import { NodeContextMenu } from "./NodeContextMenu";
 
 type BaseNodeProps = {
+  id: string;
   data: {
     label?: string;
     [key: string]: any;
@@ -12,14 +13,23 @@ type BaseNodeProps = {
   color: string;
   showInput?: boolean;
   showOutput?: boolean;
+  onEdit?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onRename?: (id: string) => void;
 };
 
 export function BaseNode({
+  id,
   data,
   icon,
   color,
   showInput = true,
   showOutput = true,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onRename,
 }: BaseNodeProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -74,26 +84,34 @@ export function BaseNode({
           <NodeContextMenu
             items={[
               {
-                label: "Edit",
+                label: "Editar",
                 icon: <Edit size={16} />,
                 onClick: () => {
-                  console.log("edit node");
+                  onEdit?.(id);
                   setMenuOpen(false);
                 }
               },
               {
-                label: "Duplicate",
+                label: "Renombrar",
+                icon: <Edit size={16} />,
+                onClick: () => {
+                  onRename?.(id);
+                  setMenuOpen(false);
+                }
+              },
+              {
+                label: "Duplicar",
                 icon: <Copy size={16} />,
                 onClick: () => {
-                  console.log("duplicate node");
+                  onDuplicate?.(id);
                   setMenuOpen(false);
                 }
               },
               {
-                label: "Delete",
+                label: "Eliminar",
                 icon: <Trash2 size={16} />,
                 onClick: () => {
-                  console.log("delete node");
+                  onDelete?.(id);
                   setMenuOpen(false);
                 }
               }
@@ -108,6 +126,14 @@ export function BaseNode({
           type="source"
           position={Position.Bottom}
           className="!bg-neutral-400"
+        />
+      )}
+
+      {/* Click outside to close menu */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setMenuOpen(false)}
         />
       )}
     </div>
