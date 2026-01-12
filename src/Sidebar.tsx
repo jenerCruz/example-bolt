@@ -107,7 +107,6 @@ export function Sidebar({ onAddNode, collapsed = false }: SidebarProps) {
       </Section>
 
       <Section title="ACCIONES" collapsed={collapsed}>
-        />
         <Item
           icon={<Clock size={18} />}
           label="Esperar respuesta"
