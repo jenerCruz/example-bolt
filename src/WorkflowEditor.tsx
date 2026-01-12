@@ -16,7 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { Edit2, Save, Play } from "lucide-react";
+import { CreditCard as Edit2, Save, Play } from "lucide-react";
 
 import { Badge } from "./ui/components/Badge";
 import { Button } from "./ui/components/Button";

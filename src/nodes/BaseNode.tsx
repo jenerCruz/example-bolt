@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Plus, Edit, Trash2, Copy } from "lucide-react";
+import { Plus, CreditCard as Edit, Trash2, Copy } from "lucide-react";
 import { NodeContextMenu } from "./NodeContextMenu";
 
 type BaseNodeProps = {
